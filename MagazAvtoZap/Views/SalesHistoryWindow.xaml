@@ -1,0 +1,16 @@
+﻿<Window x:Class="MagazAvtoZap.Views.SalesHistoryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="История продаж" Height="450" Width="800">
+    <Grid>
+        <DataGrid x:Name="SalesHistoryDataGrid" AutoGenerateColumns="False" Margin="10">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID Продажи" Binding="{Binding SaleID}"/>
+                <DataGridTextColumn Header="Дата продажи" Binding="{Binding SaleDate, StringFormat=dd.MM.yyyy HH:mm}"/>
+                <DataGridTextColumn Header="Название товара" Binding="{Binding ProductName}"/>
+                <DataGridTextColumn Header="Количество" Binding="{Binding Quantity}"/>
+                <DataGridTextColumn Header="Сумма" Binding="{Binding TotalPrice, StringFormat='{}{0:C}'}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>
