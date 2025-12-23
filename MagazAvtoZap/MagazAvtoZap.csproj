@@ -9,8 +9,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="images\Cart.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.3" />
 
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="images\Cart.png" />
   </ItemGroup>
 
 </Project>

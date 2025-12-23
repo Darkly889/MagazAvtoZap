@@ -329,6 +329,272 @@ namespace MagazAvtoZap.DataAccess
                 }
             }
         }
+        public void AddOrder(Order order)
+        {
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                {
+                    connection.Open();
+                    SqlTransaction transaction = connection.BeginTransaction();
+
+                    try
+                    {
+                        
+                        SqlCommand orderCommand = new SqlCommand(
+                            "INSERT INTO Orders (OrderNumber, FullName, Phone, Address, PaymentMethod, OrderDate, Status) " +
+                            "VALUES (@OrderNumber, @FullName, @Phone, @Address, @PaymentMethod, @OrderDate, @Status)",
+                            connection, transaction);
+
+                        orderCommand.Parameters.AddWithValue("@OrderNumber", order.OrderNumber);
+                        orderCommand.Parameters.AddWithValue("@FullName", order.FullName);
+                        orderCommand.Parameters.AddWithValue("@Phone", order.Phone);
+                        orderCommand.Parameters.AddWithValue("@Address", order.Address);
+                        orderCommand.Parameters.AddWithValue("@PaymentMethod", order.PaymentMethod);
+                        orderCommand.Parameters.AddWithValue("@OrderDate", order.OrderDate);
+                        orderCommand.Parameters.AddWithValue("@Status", order.Status);
+
+                        orderCommand.ExecuteNonQuery();
+
+                       
+                        foreach (var item in order.Items)
+                        {
+                            SqlCommand orderItemCommand = new SqlCommand(
+                                "INSERT INTO OrderItems (OrderNumber, ProductID, Quantity, Price) " +
+                                "VALUES (@OrderNumber, @ProductID, @Quantity, @Price)",
+                                connection, transaction);
+
+                            orderItemCommand.Parameters.AddWithValue("@OrderNumber", order.OrderNumber);
+                            orderItemCommand.Parameters.AddWithValue("@ProductID", item.ProductId);
+                            orderItemCommand.Parameters.AddWithValue("@Quantity", item.Quantity);
+                            orderItemCommand.Parameters.AddWithValue("@Price", item.Price);
+
+                            orderItemCommand.ExecuteNonQuery();
+                        }
+
+                        transaction.Commit();
+                    }
+                    catch (SqlException ex)
+                    {
+                        transaction.Rollback();
+                        MessageBox.Show($"Ошибка добавления заказа: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                MessageBox.Show($"Ошибка добавления заказа: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        public List<Order> GetOrderHistory()
+        {
+            var orders = new List<Order>();
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                {
+                    connection.Open();
+                    SqlCommand command = new SqlCommand(
+                        "SELECT OrderNumber, FullName, Phone, Address, PaymentMethod, OrderDate, Status FROM Orders ORDER BY OrderDate DESC",
+                        connection);
+
+                    using (SqlDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var order = new Order
+                            {
+                                OrderNumber = reader.GetString(0),
+                                FullName = reader.GetString(1),
+                                Phone = reader.GetString(2),
+                                Address = reader.GetString(3),
+                                PaymentMethod = reader.GetString(4),
+                                OrderDate = reader.GetDateTime(5),
+                                Status = reader.GetString(6),
+                                Items = new List<CartItem>()
+                            };
+                            orders.Add(order);
+                        }
+                    }
+
+                    foreach (var order in orders)
+                    {
+                        SqlCommand itemsCommand = new SqlCommand(
+                            @"SELECT oi.ProductID, oi.Quantity, oi.Price, p.Name
+                      FROM OrderItems oi
+                      JOIN Products p ON oi.ProductID = p.ProductID
+                      WHERE oi.OrderNumber = @OrderNumber",
+                            connection);
+                        itemsCommand.Parameters.AddWithValue("@OrderNumber", order.OrderNumber);
+
+                        using (SqlDataReader itemsReader = itemsCommand.ExecuteReader())
+                        {
+                            while (itemsReader.Read())
+                            {
+                                order.Items.Add(new CartItem
+                                {
+                                    ProductId = itemsReader.GetInt32(0),
+                                    Quantity = itemsReader.GetInt32(1),
+                                    Price = itemsReader.GetDecimal(2),
+                                    Name = itemsReader.GetString(3)
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                MessageBox.Show($"Ошибка загрузки истории заказов: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            return orders;
+        }
+        public Order GetOrderDetails(string orderNumber)
+        {
+            Order order = null;
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                {
+                    connection.Open();
+
+                    SqlCommand command = new SqlCommand(
+                        "SELECT OrderNumber, FullName, Phone, Address, PaymentMethod, OrderDate, Status FROM Orders WHERE OrderNumber = @OrderNumber",
+                        connection);
+                    command.Parameters.AddWithValue("@OrderNumber", orderNumber);
+
+                    using (SqlDataReader reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            order = new Order
+                            {
+                                OrderNumber = reader.GetString(0),
+                                FullName = reader.GetString(1),
+                                Phone = reader.GetString(2),
+                                Address = reader.GetString(3),
+                                PaymentMethod = reader.GetString(4),
+                                OrderDate = reader.GetDateTime(5),
+                                Status = reader.GetString(6),
+                                Items = new List<CartItem>()
+                            };
+                        }
+                    }
+
+                    if (order != null)
+                    {
+                        SqlCommand itemsCommand = new SqlCommand(
+                            @"SELECT oi.ProductID, oi.Quantity, oi.Price, p.Name
+                      FROM OrderItems oi
+                      JOIN Products p ON oi.ProductID = p.ProductID
+                      WHERE oi.OrderNumber = @OrderNumber",
+                            connection);
+                        itemsCommand.Parameters.AddWithValue("@OrderNumber", orderNumber);
+
+                        using (SqlDataReader itemsReader = itemsCommand.ExecuteReader())
+                        {
+                            while (itemsReader.Read())
+                            {
+                                order.Items.Add(new CartItem
+                                {
+                                    ProductId = itemsReader.GetInt32(0),
+                                    Quantity = itemsReader.GetInt32(1),
+                                    Price = itemsReader.GetDecimal(2),
+                                    Name = itemsReader.GetString(3)
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                MessageBox.Show($"Ошибка загрузки деталей заказа: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            return order;
+        }
+
+        public void UpdateOrderStatus(string orderNumber, string status)
+        {
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                {
+                    connection.Open();
+                    SqlTransaction transaction = connection.BeginTransaction();
+
+                    try
+                    {
+                       
+                        SqlCommand updateStatusCommand = new SqlCommand(
+                            "UPDATE Orders SET Status = @Status WHERE OrderNumber = @OrderNumber",
+                            connection, transaction);
+                        updateStatusCommand.Parameters.AddWithValue("@Status", status);
+                        updateStatusCommand.Parameters.AddWithValue("@OrderNumber", orderNumber);
+                        updateStatusCommand.ExecuteNonQuery();
+
+                        
+                        List<(int ProductID, int Quantity)> orderItems = new List<(int, int)>();
+
+                        using (SqlCommand getOrderItemsCommand = new SqlCommand(
+                            "SELECT ProductID, Quantity FROM OrderItems WHERE OrderNumber = @OrderNumber",
+                            connection, transaction))
+                        {
+                            getOrderItemsCommand.Parameters.AddWithValue("@OrderNumber", orderNumber);
+
+                            using (SqlDataReader reader = getOrderItemsCommand.ExecuteReader())
+                            {
+                                while (reader.Read())
+                                {
+                                    int productId = reader.GetInt32(0);
+                                    int quantity = reader.GetInt32(1);
+                                    orderItems.Add((productId, quantity));
+                                }
+                            }
+                        }
+
+                        
+                        if (status == "Завершен")
+                        {
+                            foreach (var item in orderItems)
+                            {
+                                SqlCommand updateStockCommand = new SqlCommand(
+                                    "UPDATE Products SET StockQuantity = StockQuantity - @Quantity WHERE ProductID = @ProductID",
+                                    connection, transaction);
+                                updateStockCommand.Parameters.AddWithValue("@Quantity", item.Quantity);
+                                updateStockCommand.Parameters.AddWithValue("@ProductID", item.ProductID);
+                                updateStockCommand.ExecuteNonQuery();
+                            }
+                        }
+                      
+                        else if (status == "Отменен")
+                        {
+                            foreach (var item in orderItems)
+                            {
+                                SqlCommand updateStockCommand = new SqlCommand(
+                                    "UPDATE Products SET StockQuantity = StockQuantity + @Quantity WHERE ProductID = @ProductID",
+                                    connection, transaction);
+                                updateStockCommand.Parameters.AddWithValue("@Quantity", item.Quantity);
+                                updateStockCommand.Parameters.AddWithValue("@ProductID", item.ProductID);
+                                updateStockCommand.ExecuteNonQuery();
+                            }
+                        }
+
+                        transaction.Commit();
+                    }
+                    catch (SqlException ex)
+                    {
+                        transaction.Rollback();
+                        MessageBox.Show($"Ошибка обновления статуса заказа: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                MessageBox.Show($"Ошибка обновления статуса заказа: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
 
 
     }
