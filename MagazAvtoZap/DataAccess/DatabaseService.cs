@@ -340,7 +340,7 @@ namespace MagazAvtoZap.DataAccess
 
                     try
                     {
-                        
+                        // Добавление заказа в таблицу Orders
                         SqlCommand orderCommand = new SqlCommand(
                             "INSERT INTO Orders (OrderNumber, FullName, Phone, Address, PaymentMethod, OrderDate, Status) " +
                             "VALUES (@OrderNumber, @FullName, @Phone, @Address, @PaymentMethod, @OrderDate, @Status)",
@@ -356,7 +356,7 @@ namespace MagazAvtoZap.DataAccess
 
                         orderCommand.ExecuteNonQuery();
 
-                       
+                        // Добавление товаров в таблицу OrderItems
                         foreach (var item in order.Items)
                         {
                             SqlCommand orderItemCommand = new SqlCommand(
@@ -386,6 +386,7 @@ namespace MagazAvtoZap.DataAccess
                 MessageBox.Show($"Ошибка добавления заказа: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
 
         public List<Order> GetOrderHistory()
         {

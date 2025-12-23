@@ -1,5 +1,6 @@
-﻿using System.Windows;
-using System.Windows.Controls;
+﻿using System;
+using System.Linq;
+using System.Windows;
 using MagazAvtoZap.Models;
 
 namespace MagazAvtoZap.Views
@@ -18,12 +19,12 @@ namespace MagazAvtoZap.Views
 
         private void UpdateTotalPrice()
         {
-            TotalPriceTextBlock.Text = $"{_cart.GetTotalPrice():C}";
+            TotalPriceTextBlock.Text = $"Итого: {_cart.GetTotalPrice():C}";
         }
 
         private void RemoveFromCartButton_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is CartItem item)
+            if (sender is System.Windows.Controls.Button button && button.Tag is CartItem item)
             {
                 _cart.RemoveItem(item);
                 CartItemsDataGrid.ItemsSource = null;
@@ -41,8 +42,14 @@ namespace MagazAvtoZap.Views
             }
 
             CheckoutWindow checkoutWindow = new CheckoutWindow(_cart);
-            checkoutWindow.ShowDialog();
-            this.Close();
+            if (checkoutWindow.ShowDialog() == true)
+            {
+                _cart.Clear();
+                CartItemsDataGrid.ItemsSource = null;
+                CartItemsDataGrid.ItemsSource = _cart.Items;
+                UpdateTotalPrice();
+            }
         }
+
     }
 }
