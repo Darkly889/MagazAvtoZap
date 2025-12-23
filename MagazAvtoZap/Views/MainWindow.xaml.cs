@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using MagazAvtoZap.BusinessLogic;
 using MagazAvtoZap.DataAccess;
 using MagazAvtoZap.Models;
@@ -21,6 +22,8 @@ namespace MagazAvtoZap.Views
             _salesService = new SalesService();
             _isAdmin = false;
             LoadProducts();
+            _cart.PropertyChanged += Cart_PropertyChanged;
+            AdminButton.Visibility = Visibility.Collapsed; 
         }
 
         public MainWindow(bool isAdmin)
@@ -30,23 +33,47 @@ namespace MagazAvtoZap.Views
             _salesService = new SalesService();
             _isAdmin = isAdmin;
             LoadProducts();
+            _cart.PropertyChanged += Cart_PropertyChanged;
 
             if (_isAdmin)
             {
-                AdminButton.Visibility = Visibility.Visible;
+                AdminButton.Visibility = Visibility.Visible; 
             }
+            else
+            {
+                AdminButton.Visibility = Visibility.Collapsed; 
+            }
+        }
+
+        private void Cart_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            UpdateCartItemCount();
+        }
+
+        private void UpdateCartItemCount()
+        {
+            int itemCount = _cart.Items.Sum(item => item.Quantity);
+            CartItemCountTextBlock.Text = itemCount.ToString();
         }
 
         private void LoadProducts()
         {
-            var products = _databaseService.GetProducts();
-            ProductsDataGrid.ItemsSource = products;
+            try
+            {
+                var products = _databaseService.GetProducts();
+                ProductsDataGrid.ItemsSource = products;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка загрузки товаров: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void RefreshProductsButton_Click(object sender, RoutedEventArgs e)
         {
             LoadProducts();
         }
+
 
         private void AddToCartButton_Click(object sender, RoutedEventArgs e)
         {
@@ -69,9 +96,7 @@ namespace MagazAvtoZap.Views
             {
                 cartItem.Quantity = quantity;
                 _cart.AddItem(cartItem);
-                CartItemsDataGrid.ItemsSource = null;
-                CartItemsDataGrid.ItemsSource = _cart.Items;
-                TotalPriceTextBlock.Text = $"Итого: {_cart.GetTotalPrice():C}";
+                MessageBox.Show("Товар добавлен в корзину.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
@@ -79,38 +104,10 @@ namespace MagazAvtoZap.Views
             }
         }
 
-        private void RemoveFromCartButton_Click(object sender, RoutedEventArgs e)
+        private void CartImage_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (sender is Button button && button.Tag is CartItem item)
-            {
-                _cart.RemoveItem(item);
-                CartItemsDataGrid.ItemsSource = null;
-                CartItemsDataGrid.ItemsSource = _cart.Items;
-                TotalPriceTextBlock.Text = $"Итого: {_cart.GetTotalPrice():C}";
-            }
-        }
-
-        private void CheckoutButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (_cart.Items.Count == 0)
-            {
-                MessageBox.Show("Корзина пуста.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-
-            if (_salesService.ProcessCartCheckout(_cart))
-            {
-                _cart.Clear();
-                CartItemsDataGrid.ItemsSource = null;
-                TotalPriceTextBlock.Text = "Итого: 0 руб.";
-                LoadProducts();
-            }
-        }
-
-        private void ShowSalesHistory_Click(object sender, RoutedEventArgs e)
-        {
-            SalesHistoryWindow salesHistoryWindow = new SalesHistoryWindow();
-            salesHistoryWindow.Show();
+            CartWindow cartWindow = new CartWindow(_cart);
+            cartWindow.ShowDialog();
         }
 
         private void AdminButton_Click(object sender, RoutedEventArgs e)

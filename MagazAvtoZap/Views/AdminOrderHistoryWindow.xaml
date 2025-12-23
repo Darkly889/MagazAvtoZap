@@ -1,0 +1,24 @@
+﻿<Window x:Class="MagazAvtoZap.Views.AdminOrderHistoryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="История заказов" Height="450" Width="800">
+
+    <Grid>
+        <DataGrid x:Name="OrderHistoryDataGrid" AutoGenerateColumns="False" Margin="10">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Номер заказа" Binding="{Binding OrderNumber}"/>
+                <DataGridTextColumn Header="Дата заказа" Binding="{Binding OrderDate, StringFormat=dd.MM.yyyy HH:mm}"/>
+                <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}"/>
+                <DataGridTextColumn Header="Статус" Binding="{Binding Status}"/>
+                <DataGridTextColumn Header="Сумма" Binding="{Binding TotalPrice, StringFormat='{}{0:C}'}"/>
+                <DataGridTemplateColumn Header="Подробнее">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="Подробнее" Click="ViewOrderDetails_Click" Tag="{Binding OrderNumber}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>
