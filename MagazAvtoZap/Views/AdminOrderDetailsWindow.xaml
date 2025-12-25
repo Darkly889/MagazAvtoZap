@@ -29,7 +29,7 @@
                 <DataGridTextColumn Header="Название товара" Binding="{Binding Name}"/>
                 <DataGridTextColumn Header="Количество" Binding="{Binding Quantity}"/>
                 <DataGridTextColumn Header="Цена" Binding="{Binding Price}"/>
-                <DataGridTextColumn Header="Сумма" Binding="{Binding TotalPrice, StringFormat='{}{0:C}'}"/>
+                <DataGridTextColumn Header="Сумма" Binding="{Binding TotalPrice, StringFormat='{}{0:C}'}" IsReadOnly="True"/>
             </DataGrid.Columns>
         </DataGrid>
 

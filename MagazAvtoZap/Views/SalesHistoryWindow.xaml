@@ -3,13 +3,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="История продаж" Height="450" Width="800">
     <Grid>
-        <DataGrid x:Name="SalesHistoryDataGrid" AutoGenerateColumns="False" Margin="10">
+        <DataGrid x:Name="SalesHistoryDataGrid" AutoGenerateColumns="False" Margin="10" CanUserAddRows="False" CanUserDeleteRows="False">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="ID Продажи" Binding="{Binding SaleID}"/>
-                <DataGridTextColumn Header="Дата продажи" Binding="{Binding SaleDate, StringFormat=dd.MM.yyyy HH:mm}"/>
-                <DataGridTextColumn Header="Название товара" Binding="{Binding ProductName}"/>
-                <DataGridTextColumn Header="Количество" Binding="{Binding Quantity}"/>
-                <DataGridTextColumn Header="Сумма" Binding="{Binding TotalPrice, StringFormat='{}{0:C}'}"/>
+                <DataGridTextColumn Header="ID Продажи" Binding="{Binding SaleID}" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Дата продажи" Binding="{Binding SaleDate, StringFormat=dd.MM.yyyy HH:mm}" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Название товара" Binding="{Binding ProductName}" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Количество" Binding="{Binding Quantity}" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Сумма" Binding="{Binding TotalPrice, StringFormat='{}{0:C}'}" IsReadOnly="True"/>
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

@@ -4,14 +4,14 @@
         Title="История заказов" Height="450" Width="800">
 
     <Grid>
-        <DataGrid x:Name="OrderHistoryDataGrid" AutoGenerateColumns="False" Margin="10">
+        <DataGrid x:Name="OrderHistoryDataGrid" AutoGenerateColumns="False" Margin="10" CanUserAddRows="False" CanUserDeleteRows="False">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Номер заказа" Binding="{Binding OrderNumber}"/>
-                <DataGridTextColumn Header="Дата заказа" Binding="{Binding OrderDate, StringFormat=dd.MM.yyyy HH:mm}"/>
-                <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}"/>
-                <DataGridTextColumn Header="Статус" Binding="{Binding Status}"/>
-                <DataGridTextColumn Header="Сумма" Binding="{Binding TotalPrice, StringFormat='{}{0:C}'}"/>
-                <DataGridTemplateColumn Header="Подробнее">
+                <DataGridTextColumn Header="Номер заказа" Binding="{Binding OrderNumber}" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Дата заказа" Binding="{Binding OrderDate, StringFormat=dd.MM.yyyy HH:mm}" IsReadOnly="True"/>
+                <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Сумма" Binding="{Binding TotalPrice, StringFormat='{}{0:C}'}" IsReadOnly="True"/>
+                <DataGridTemplateColumn Header="Подробнее" >
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Button Content="Подробнее" Click="ViewOrderDetails_Click" Tag="{Binding OrderNumber}"/>
