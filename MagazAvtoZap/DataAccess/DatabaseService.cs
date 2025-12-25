@@ -22,24 +22,28 @@ namespace MagazAvtoZap.DataAccess
         public List<Product> GetProducts()
         {
             var products = new List<Product>();
+
             try
             {
                 using (SqlConnection connection = new SqlConnection(_connectionString))
                 {
                     connection.Open();
+
                     SqlCommand command = new SqlCommand(
-                        @"SELECT
-                            p.ProductID, p.Name, p.CategoryID, c.Name AS CategoryName,
-                            p.Supplier, p.Price, p.StockQuantity, p.Description
-                          FROM
-                            Products p
-                          JOIN
-                            Categories c ON p.CategoryID = c.CategoryID", connection);
+                        @"SELECT p.ProductID, p.Name, p.CategoryID, c.Name AS CategoryName, p.Supplier, p.Price, p.StockQuantity, p.Description,
+                         ISNULL((SELECT SUM(Quantity) FROM ReservedProducts WHERE ProductID = p.ProductID), 0) AS ReservedQuantity
+                  FROM Products p
+                  JOIN Categories c ON p.CategoryID = c.CategoryID",
+                        connection);
 
                     using (SqlDataReader reader = command.ExecuteReader())
                     {
                         while (reader.Read())
                         {
+                            int stockQuantity = reader.GetInt32(6);
+                            int reservedQuantity = reader.GetInt32(8);
+                            int availableQuantity = stockQuantity - reservedQuantity;
+
                             products.Add(new Product
                             {
                                 ProductID = reader.GetInt32(0),
@@ -48,7 +52,8 @@ namespace MagazAvtoZap.DataAccess
                                 CategoryName = reader.GetString(3),
                                 Supplier = reader.IsDBNull(4) ? null : reader.GetString(4),
                                 Price = reader.GetDecimal(5),
-                                StockQuantity = reader.GetInt32(6),
+                                StockQuantity = stockQuantity,
+                                AvailableQuantity = availableQuantity,
                                 Description = reader.IsDBNull(7) ? null : reader.GetString(7)
                             });
                         }
@@ -59,8 +64,11 @@ namespace MagazAvtoZap.DataAccess
             {
                 MessageBox.Show($"Ошибка загрузки товаров: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+
             return products;
         }
+
+
 
         public int GetProductStock(int productId)
         {
@@ -522,82 +530,116 @@ namespace MagazAvtoZap.DataAccess
 
         public void UpdateOrderStatus(string orderNumber, string status)
         {
-            try
+            using (SqlConnection connection = new SqlConnection(_connectionString))
             {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
+                connection.Open();
+                SqlTransaction transaction = connection.BeginTransaction();
+
+                try
                 {
-                    connection.Open();
-                    SqlTransaction transaction = connection.BeginTransaction();
+                    
+                    SqlCommand updateStatusCommand = new SqlCommand(
+                        "UPDATE Orders SET Status = @Status WHERE OrderNumber = @OrderNumber",
+                        connection, transaction);
+                    updateStatusCommand.Parameters.AddWithValue("@Status", status);
+                    updateStatusCommand.Parameters.AddWithValue("@OrderNumber", orderNumber);
+                    updateStatusCommand.ExecuteNonQuery();
 
-                    try
+                    
+                    List<(int ProductID, int Quantity)> orderItems = new List<(int, int)>();
+                    SqlCommand getOrderItemsCommand = new SqlCommand(
+                        "SELECT ProductID, Quantity FROM OrderItems WHERE OrderNumber = @OrderNumber",
+                        connection, transaction);
+                    getOrderItemsCommand.Parameters.AddWithValue("@OrderNumber", orderNumber);
+                    using (SqlDataReader reader = getOrderItemsCommand.ExecuteReader())
                     {
-                       
-                        SqlCommand updateStatusCommand = new SqlCommand(
-                            "UPDATE Orders SET Status = @Status WHERE OrderNumber = @OrderNumber",
+                        while (reader.Read())
+                        {
+                            int productId = reader.GetInt32(0);
+                            int quantity = reader.GetInt32(1);
+                            orderItems.Add((productId, quantity));
+                        }
+                    }
+
+                    
+                    if (status == "Отправлен")
+                    {
+                        foreach (var item in orderItems)
+                        {
+                            SqlCommand reserveProductCommand = new SqlCommand(
+                                @"IF NOT EXISTS (SELECT 1 FROM ReservedProducts WHERE OrderNumber = @OrderNumber AND ProductID = @ProductID)
+                          INSERT INTO ReservedProducts (OrderNumber, ProductID, Quantity)
+                          VALUES (@OrderNumber, @ProductID, @Quantity)
+                          ELSE
+                          UPDATE ReservedProducts SET Quantity = Quantity + @Quantity
+                          WHERE OrderNumber = @OrderNumber AND ProductID = @ProductID",
+                                connection, transaction);
+                            reserveProductCommand.Parameters.AddWithValue("@OrderNumber", orderNumber);
+                            reserveProductCommand.Parameters.AddWithValue("@ProductID", item.ProductID);
+                            reserveProductCommand.Parameters.AddWithValue("@Quantity", item.Quantity);
+                            reserveProductCommand.ExecuteNonQuery();
+                        }
+                    }
+
+                    else if (status == "Завершен")
+                    {
+                        foreach (var item in orderItems)
+                        {
+                            SqlCommand checkStockCommand = new SqlCommand(
+                                "SELECT StockQuantity FROM Products WHERE ProductID = @ProductID",
+                                connection, transaction);
+                            checkStockCommand.Parameters.AddWithValue("@ProductID", item.ProductID);
+                            int stockQuantity = (int)checkStockCommand.ExecuteScalar();
+
+                            if (stockQuantity < item.Quantity)
+                            {
+                                transaction.Rollback();
+                                MessageBox.Show($"Недостаточно товара на складе для завершения заказа.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                                return;
+                            }
+
+                            SqlCommand updateStockCommand = new SqlCommand(
+                                "UPDATE Products SET StockQuantity = StockQuantity - @Quantity WHERE ProductID = @ProductID",
+                                connection, transaction);
+                            updateStockCommand.Parameters.AddWithValue("@Quantity", item.Quantity);
+                            updateStockCommand.Parameters.AddWithValue("@ProductID", item.ProductID);
+                            updateStockCommand.ExecuteNonQuery();
+                        }
+
+                        SqlCommand deleteReservationCommand = new SqlCommand(
+                            "DELETE FROM ReservedProducts WHERE OrderNumber = @OrderNumber",
                             connection, transaction);
-                        updateStatusCommand.Parameters.AddWithValue("@Status", status);
-                        updateStatusCommand.Parameters.AddWithValue("@OrderNumber", orderNumber);
-                        updateStatusCommand.ExecuteNonQuery();
-
-                        
-                        List<(int ProductID, int Quantity)> orderItems = new List<(int, int)>();
-
-                        using (SqlCommand getOrderItemsCommand = new SqlCommand(
-                            "SELECT ProductID, Quantity FROM OrderItems WHERE OrderNumber = @OrderNumber",
-                            connection, transaction))
-                        {
-                            getOrderItemsCommand.Parameters.AddWithValue("@OrderNumber", orderNumber);
-
-                            using (SqlDataReader reader = getOrderItemsCommand.ExecuteReader())
-                            {
-                                while (reader.Read())
-                                {
-                                    int productId = reader.GetInt32(0);
-                                    int quantity = reader.GetInt32(1);
-                                    orderItems.Add((productId, quantity));
-                                }
-                            }
-                        }
-
-                        
-                        if (status == "Завершен")
-                        {
-                            foreach (var item in orderItems)
-                            {
-                                SqlCommand updateStockCommand = new SqlCommand(
-                                    "UPDATE Products SET StockQuantity = StockQuantity - @Quantity WHERE ProductID = @ProductID",
-                                    connection, transaction);
-                                updateStockCommand.Parameters.AddWithValue("@Quantity", item.Quantity);
-                                updateStockCommand.Parameters.AddWithValue("@ProductID", item.ProductID);
-                                updateStockCommand.ExecuteNonQuery();
-                            }
-                        }
-                      
-                        else if (status == "Отменен")
-                        {
-                            foreach (var item in orderItems)
-                            {
-                                SqlCommand updateStockCommand = new SqlCommand(
-                                    "UPDATE Products SET StockQuantity = StockQuantity + @Quantity WHERE ProductID = @ProductID",
-                                    connection, transaction);
-                                updateStockCommand.Parameters.AddWithValue("@Quantity", item.Quantity);
-                                updateStockCommand.Parameters.AddWithValue("@ProductID", item.ProductID);
-                                updateStockCommand.ExecuteNonQuery();
-                            }
-                        }
-
-                        transaction.Commit();
+                        deleteReservationCommand.Parameters.AddWithValue("@OrderNumber", orderNumber);
+                        deleteReservationCommand.ExecuteNonQuery();
                     }
-                    catch (SqlException ex)
+
+
+                    else if (status == "Отменен")
                     {
-                        transaction.Rollback();
-                        MessageBox.Show($"Ошибка обновления статуса заказа: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                        foreach (var item in orderItems)
+                        {
+                            SqlCommand updateStockCommand = new SqlCommand(
+                                "UPDATE Products SET StockQuantity = StockQuantity + @Quantity WHERE ProductID = @ProductID",
+                                connection, transaction);
+                            updateStockCommand.Parameters.AddWithValue("@Quantity", item.Quantity);
+                            updateStockCommand.Parameters.AddWithValue("@ProductID", item.ProductID);
+                            updateStockCommand.ExecuteNonQuery();
+                        }
+
+                        SqlCommand deleteReservationCommand = new SqlCommand(
+                            "DELETE FROM ReservedProducts WHERE OrderNumber = @OrderNumber",
+                            connection, transaction);
+                        deleteReservationCommand.Parameters.AddWithValue("@OrderNumber", orderNumber);
+                        deleteReservationCommand.ExecuteNonQuery();
                     }
+
+                    transaction.Commit();
                 }
-            }
-            catch (SqlException ex)
-            {
-                MessageBox.Show($"Ошибка обновления статуса заказа: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                catch (SqlException ex)
+                {
+                    transaction.Rollback();
+                    MessageBox.Show($"Ошибка обновления статуса заказа: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 

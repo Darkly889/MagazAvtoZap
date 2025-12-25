@@ -1,7 +1,8 @@
-﻿using System;
-using System.Windows;
-using MagazAvtoZap.DataAccess;
+﻿using MagazAvtoZap.DataAccess;
 using MagazAvtoZap.Models;
+using System;
+using System.ComponentModel.DataAnnotations;
+using System.Windows;
 
 namespace MagazAvtoZap.Views
 {
@@ -54,46 +55,60 @@ namespace MagazAvtoZap.Views
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(NameTextBox.Text) || string.IsNullOrEmpty(PriceTextBox.Text) || string.IsNullOrEmpty(StockQuantityTextBox.Text))
+            _product.Name = NameTextBox.Text;
+            _product.Supplier = SupplierTextBox.Text;
+            _product.Description = DescriptionTextBox.Text;
+
+            if (CategoryComboBox.SelectedValue == null)
             {
-                MessageBox.Show("Пожалуйста, заполните все обязательные поля.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Выберите категорию.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            _product.CategoryID = (int)CategoryComboBox.SelectedValue;
+
+            if (!decimal.TryParse(PriceTextBox.Text, out decimal price) || price <= 0)
+            {
+                MessageBox.Show("Цена должна быть положительным числом.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            _product.Price = price;
+
+            if (!int.TryParse(StockQuantityTextBox.Text, out int stockQuantity) || stockQuantity < 0)
+            {
+                MessageBox.Show("Количество на складе должно быть неотрицательным целым числом.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            _product.StockQuantity = stockQuantity;
+
+            // Проверка валидации с использованием аннотаций данных
+            var validationResults = new List<ValidationResult>();
+            var validationContext = new ValidationContext(_product);
+
+            if (!Validator.TryValidateObject(_product, validationContext, validationResults, true))
+            {
+                string errorMessage = string.Join(Environment.NewLine, validationResults.Select(r => r.ErrorMessage));
+                MessageBox.Show($"Ошибка валидации:\n{errorMessage}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            if (!decimal.TryParse(PriceTextBox.Text, out decimal price) || price < 0.01m)
+            try
             {
-                MessageBox.Show("Цена должна быть не менее 0.01.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
+                if (_product.ProductID == 0)
+                {
+                    _databaseService.AddProduct(_product);
+                }
+                else
+                {
+                    _databaseService.UpdateProduct(_product);
+                }
+                DialogResult = true;
+                Close();
             }
-
-            if (!int.TryParse(StockQuantityTextBox.Text, out int stockQuantity) || stockQuantity < 1)
+            catch (Exception ex)
             {
-                MessageBox.Show("Остаток на складе должен быть не менее 1.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
+                MessageBox.Show($"Ошибка сохранения товара: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-
-            var product = new Product
-            {
-                Name = NameTextBox.Text,
-                CategoryID = (int)CategoryComboBox.SelectedValue,
-                Supplier = SupplierTextBox.Text,
-                Price = price,
-                StockQuantity = stockQuantity,
-                Description = DescriptionTextBox.Text
-            };
-
-            if (_product != null)
-            {
-                product.ProductID = _product.ProductID;
-                _databaseService.UpdateProduct(product);
-            }
-            else
-            {
-                _databaseService.AddProduct(product);
-            }
-
-            this.DialogResult = true;
-            this.Close();
         }
+
     }
 }
