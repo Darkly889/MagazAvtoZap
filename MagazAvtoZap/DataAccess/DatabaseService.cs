@@ -305,7 +305,12 @@ namespace MagazAvtoZap.DataAccess
 
                 try
                 {
-                    
+                    SqlCommand deleteOrderItemsCommand = new SqlCommand(
+                "DELETE FROM OrderItems WHERE ProductID = @ProductID",
+                        connection,
+                        transaction);
+                    deleteOrderItemsCommand.Parameters.AddWithValue("@ProductID", productId);
+                    deleteOrderItemsCommand.ExecuteNonQuery();
                     SqlCommand deleteSalesCommand = new SqlCommand(
                         "DELETE FROM Sales WHERE ProductID = @ProductID",
                         connection,
@@ -340,7 +345,7 @@ namespace MagazAvtoZap.DataAccess
 
                     try
                     {
-                        // Добавление заказа в таблицу Orders
+                        
                         SqlCommand orderCommand = new SqlCommand(
                             "INSERT INTO Orders (OrderNumber, FullName, Phone, Address, PaymentMethod, OrderDate, Status) " +
                             "VALUES (@OrderNumber, @FullName, @Phone, @Address, @PaymentMethod, @OrderDate, @Status)",
@@ -356,7 +361,6 @@ namespace MagazAvtoZap.DataAccess
 
                         orderCommand.ExecuteNonQuery();
 
-                        // Добавление товаров в таблицу OrderItems
                         foreach (var item in order.Items)
                         {
                             SqlCommand orderItemCommand = new SqlCommand(

@@ -4,15 +4,19 @@
         Title="Корзина" Height="450" Width="600">
 
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="487*"/>
+            <ColumnDefinition Width="113*"/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Text="Ваша корзина" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="10"/>
+        <TextBlock Text="Ваша корзина" FontSize="18" FontWeight="Bold" Grid.Row="0" Margin="10,10,10,10" Grid.ColumnSpan="2"/>
 
-        <DataGrid x:Name="CartItemsDataGrid" AutoGenerateColumns="False" Grid.Row="1" Margin="10" IsReadOnly="True">
+        <DataGrid x:Name="CartItemsDataGrid" AutoGenerateColumns="False" Grid.Row="1" Margin="10,10,10,10" IsReadOnly="True" Grid.ColumnSpan="2">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Название" Binding="{Binding Name}" Width="*"/>
                 <DataGridTextColumn Header="Количество" Binding="{Binding Quantity}" Width="Auto"/>
@@ -28,7 +32,7 @@
             </DataGrid.Columns>
         </DataGrid>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left" Margin="338,10,0,10" Grid.ColumnSpan="2">
             <TextBlock Text="Итого:" FontWeight="Bold" VerticalAlignment="Center" Margin="5"/>
             <TextBlock x:Name="TotalPriceTextBlock" Text="0 руб." FontWeight="Bold" VerticalAlignment="Center" Margin="5"/>
             <Button Content="Оформить заказ" Click="CheckoutButton_Click" Margin="5" Width="150" Height="30"/>

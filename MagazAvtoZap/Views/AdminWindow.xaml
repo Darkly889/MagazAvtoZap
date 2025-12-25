@@ -12,19 +12,21 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
             <Button Content="Добавить товар" Click="AddProductButton_Click" Margin="5" Width="120"/>
             <Button Content="Редактировать товар" Click="EditProductButton_Click" Margin="5" Width="120"/>
+            <Button Content="Удалить товар" Click="DeleteProductButton_Click" Margin="5" Width="120"/>
+            <Button Content="История продаж" Click="ShowSalesHistory_Click" Margin="5" Width="120"/>
             <Button Content="История заказов" Click="ShowOrderHistory_Click" Margin="5" Width="120"/>
         </StackPanel>
 
-        
-        <DataGrid x:Name="ProductsDataGrid" AutoGenerateColumns="False" Grid.Row="1" Margin="10">
+
+        <DataGrid x:Name="ProductsDataGrid" AutoGenerateColumns="False" Grid.Row="1" Margin="10" CanUserAddRows="False" CanUserDeleteRows="False">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding ProductID}" Width="Auto"/>
-                <DataGridTextColumn Header="Название" Binding="{Binding Name}" Width="Auto"/>
-                <DataGridTextColumn Header="Категория" Binding="{Binding CategoryName}" Width="Auto"/>
-                <DataGridTextColumn Header="Поставщик" Binding="{Binding Supplier}" Width="Auto"/>
-                <DataGridTextColumn Header="Цена" Binding="{Binding Price}" Width="Auto"/>
-                <DataGridTextColumn Header="Остаток" Binding="{Binding StockQuantity}" Width="Auto"/>
-                <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="*"/>
+                <DataGridTextColumn Header="ID" Binding="{Binding ProductID}" Width="Auto" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Название" Binding="{Binding Name}" Width="Auto" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Категория" Binding="{Binding CategoryName}" Width="Auto" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Поставщик" Binding="{Binding Supplier}" Width="Auto" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Цена" Binding="{Binding Price}" Width="Auto" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Остаток" Binding="{Binding StockQuantity}" Width="Auto" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="*" IsReadOnly="True"/>
             </DataGrid.Columns>
         </DataGrid>
     </Grid>
