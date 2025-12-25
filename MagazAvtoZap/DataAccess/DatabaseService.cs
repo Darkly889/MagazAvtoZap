@@ -531,7 +531,16 @@ namespace MagazAvtoZap.DataAccess
 
                     try
                     {
-                       
+                        
+                        string currentStatus = "";
+                        SqlCommand getCurrentStatusCommand = new SqlCommand(
+                            "SELECT Status FROM Orders WHERE OrderNumber = @OrderNumber",
+                            connection, transaction);
+                        getCurrentStatusCommand.Parameters.AddWithValue("@OrderNumber", orderNumber);
+                        object currentStatusObj = getCurrentStatusCommand.ExecuteScalar();
+                        currentStatus = currentStatusObj != null ? currentStatusObj.ToString() : "";
+
+                        
                         SqlCommand updateStatusCommand = new SqlCommand(
                             "UPDATE Orders SET Status = @Status WHERE OrderNumber = @OrderNumber",
                             connection, transaction);
@@ -541,26 +550,23 @@ namespace MagazAvtoZap.DataAccess
 
                         
                         List<(int ProductID, int Quantity)> orderItems = new List<(int, int)>();
-
-                        using (SqlCommand getOrderItemsCommand = new SqlCommand(
+                        SqlCommand getOrderItemsCommand = new SqlCommand(
                             "SELECT ProductID, Quantity FROM OrderItems WHERE OrderNumber = @OrderNumber",
-                            connection, transaction))
-                        {
-                            getOrderItemsCommand.Parameters.AddWithValue("@OrderNumber", orderNumber);
+                            connection, transaction);
+                        getOrderItemsCommand.Parameters.AddWithValue("@OrderNumber", orderNumber);
 
-                            using (SqlDataReader reader = getOrderItemsCommand.ExecuteReader())
+                        using (SqlDataReader reader = getOrderItemsCommand.ExecuteReader())
+                        {
+                            while (reader.Read())
                             {
-                                while (reader.Read())
-                                {
-                                    int productId = reader.GetInt32(0);
-                                    int quantity = reader.GetInt32(1);
-                                    orderItems.Add((productId, quantity));
-                                }
+                                int productId = reader.GetInt32(0);
+                                int quantity = reader.GetInt32(1);
+                                orderItems.Add((productId, quantity));
                             }
                         }
 
                         
-                        if (status == "Завершен")
+                        if (status == "Отправлен" && currentStatus != "Отправлен" && currentStatus != "Завершен")
                         {
                             foreach (var item in orderItems)
                             {
@@ -572,8 +578,8 @@ namespace MagazAvtoZap.DataAccess
                                 updateStockCommand.ExecuteNonQuery();
                             }
                         }
-                      
-                        else if (status == "Отменен")
+                        
+                        else if (status == "Отменен" && (currentStatus == "Отправлен" || currentStatus == "Завершен"))
                         {
                             foreach (var item in orderItems)
                             {
@@ -600,6 +606,7 @@ namespace MagazAvtoZap.DataAccess
                 MessageBox.Show($"Ошибка обновления статуса заказа: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
 
 
     }
